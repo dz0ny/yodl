@@ -1,0 +1,116 @@
+<!doctype html>
+<html ng-app="yomm">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Simple mp3 downloader from many services">
+    <title>YOmm</title>
+    <link rel="stylesheet" href="//yui.yahooapis.com/pure/0.3.0/pure-min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.2/angular.min.js"></script>
+    <script src="app.js"></script>
+    <style>
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: bold;
+            color: rgb(75, 75, 75);
+        }
+        .thumb{
+            max-width: 12em;
+            max-height: 8em;
+       }
+        h3 {
+            font-size: 1.25em;
+        }
+        h4 {
+            font-size: 1.125em;
+        }
+
+        a {
+            color: #3b8bba;
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: #265778;
+        }
+        body{
+            color: #777;
+        }
+        .content {
+            margin: 0 auto;
+            padding: 0 2em;
+            max-width: 800px;
+            margin-bottom: 50px;
+        }
+        .header {
+            min-height: 80px;
+            margin: 0;
+            color: #333;
+            padding: 1em 2em;
+            text-align: center;
+            border-bottom: 1px solid #EEE;
+            background: #FFF;
+        }
+        .pure-u-1-2{
+            border-bottom: 1px solid #EEE;
+            padding: 1em 0;
+        }
+        table{
+            width: 100%;
+        }
+    </style>
+</head>
+    <body class="content">
+        <div class="pure-g" ng-controller="MainCtrl">
+            <div class="pure-u-1">
+                <div class="header">
+                    <h1>YOmm</h1>
+                    <h2>Your Momma's music downloader</h2>
+                </div>
+            </div>
+            <div class="pure-u-1-2">
+              <h2 class="content-subhead">Prenesi nov komad</h2>
+              <form form class="pure-form pure-form-stacked" ng-submit="add()">
+                <fieldset>
+                    <input class="pure-input-1" type="text" ng-model="url" placeholder="Vnesi url" required>
+                    <input type="submit" class="pure-button pure-button-primary" value="Prenesi">
+
+                </fieldset>
+              </form>
+            </div>
+
+            <div class="pure-u-1-2">
+              <h2 class="content-subhead">Se prenaša</h2>
+              <ul class="unstyled">
+                <li ng-repeat="file in downloading">
+                  <span><a href="{{file}}">{{file}}</a></span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="pure-u-1">
+                <h2 class="content-subhead">Seznam prenešenih</h2>
+                <table class="pure-table pure-table-horizontal">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr ng-repeat="file in downloaded | orderBy:'data.added':reverse">
+                            <td>
+                                <img class="thumb" ng-src="{{file.data.thumbnail}}">
+                            </td>
+                            <td>
+                                <p><a target="_blank" href="{{file.stream}}">{{file.title}}</a></p>
+                                <audio ng-src="{{file.stream}}" controls preload="metadata"></audio>
+                                <p><a target="_blank" href="{{file.data.webpage_url}}">{{file.data.webpage_url}}</a></p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+</html>

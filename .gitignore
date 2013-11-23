@@ -2,7 +2,7 @@
 
 # C extensions
 *.so
-
+.idea
 # Packages
 *.egg
 *.egg-info
@@ -19,7 +19,7 @@ lib
 lib64
 __pycache__
 include
-
+data
 # Installer logs
 pip-log.txt
 

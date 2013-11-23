@@ -24,38 +24,29 @@ def get_version(filename):
     metadata = dict(re.findall("__([a-z]+)__ = '([^']+)'", content))
     return metadata['version']
 
-requires = [
-    'pyramid',
-    'pyramid_jinja2',
-    'pyramid_debugtoolbar',
-    'waitress',
-    'sqlalchemy',
-    'celery',
-    'zope.sqlalchemy',
-    'mock',
-    'nose'
-]
-
 setup(name='yodl',
       version=get_version('yodl/__init__.py'),
-      description='yodl',
+      description='Your mom\'s music downloader',
       long_description=readme + '\n\n' + history,
+      entry_points={
+          'console_scripts': [
+              'yomm = yodl.__main__:main',
+          ],
+      },
       classifiers=[
           "Programming Language :: Python",
-          "Framework :: Pyramid",
+          "Framework :: Tornado",
           "Topic :: Internet :: WWW/HTTP",
           "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
       ],
-      keywords='web pyramid pylons',
       packages=find_packages(exclude=['supervisor', 'tests', 'tests.*']),
       include_package_data=True,
       zip_safe=False,
-      install_requires=requires,
-      tests_require=requires,
+      install_requires=[
+          'tornado',
+          'redis',
+          'celery',
+          'youtube_dl'
+      ],
       test_suite='nose.collector',
-      entry_points={
-          b'paste.app_factory': [
-              'main = yodl:main',
-          ],
-      },
       )

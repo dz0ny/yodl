@@ -1,9 +1,6 @@
-pyramid
-pyramid_jinja2
-pyramid_debugtoolbar
-waitress
-sqlalchemy
+tornado
+redis
 celery
-zope.sqlalchemy
 mock
 nose
+youtube_dl
