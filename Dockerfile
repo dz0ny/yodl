@@ -19,11 +19,11 @@ run    apt-get --yes install supervisor python-pip libavcodec-extra-53 ffmpeg --
 
 ## Setup App
 run    cd /opt; git clone https://github.com/dz0ny/yodl.git app --depth 1
-run    cd /opt/app ; python setup.py install
+run    cd /opt/app ; python setup.py install; mkdir data
 
 add    ./supervisor/supervisord.conf /etc/supervisor/supervisord.conf
 add    ./supervisor/conf.d/yodl.conf /etc/supervisor/conf.d/yodl.conf
 
 expose 8888
 
-cmd ["/usr/bin/supervisord"]
+CMD ["/usr/bin/supervisord"]
