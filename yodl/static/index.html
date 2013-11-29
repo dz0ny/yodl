@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Simple mp3 downloader from many services">
     <title>YOmm</title>
+    <script src="//cdn.ravenjs.com/1.1.0/raven.min.js"></script>
+    <script>
+    Raven.config('http://00a0cb47320e4313924de7e4724c9f51@sentry.radioterminal.si/8').install();
+    </script>
     <link rel="stylesheet" href="//yui.yahooapis.com/pure/0.3.0/pure-min.css">
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.2/angular.min.js"></script>
     <script src="app.js"></script>
@@ -98,13 +102,13 @@
                     </thead>
 
                     <tbody>
-                        <tr ng-repeat="file in downloaded | orderBy:'data.added':reverse">
+                        <tr ng-repeat="file in downloaded | orderBy:'data.added'2">
                             <td>
                                 <img class="thumb" ng-src="{{file.data.thumbnail}}">
                             </td>
                             <td>
                                 <p><a target="_blank" href="{{file.stream}}">{{file.title}}</a></p>
-                                <audio ng-src="{{file.stream}}" controls preload="metadata"></audio>
+                                <audio ng-src="{{file.stream}}" controls preload="none"></audio>
                                 <p><a target="_blank" href="{{file.data.webpage_url}}">{{file.data.webpage_url}}</a></p>
                             </td>
                         </tr>
