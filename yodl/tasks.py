@@ -50,7 +50,7 @@ def transcode(url, user_agent, store):
         jsoninfo = '%s.info.json' % raw_file
         if os.path.isfile(orginal) and data["ext"] is not "mp3":
             print("removing", orginal)
-            os.remove(orginal)
+            #os.remove(orginal)
         if os.path.isfile(jsoninfo):
             print("removing", jsoninfo)
             os.remove(jsoninfo)
