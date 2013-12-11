@@ -18,7 +18,7 @@ run    apt-get --yes install redis-server --force-yes
 run    apt-get --yes install supervisor python-pip libavcodec-extra-53 ffmpeg --force-yes
 
 ## Setup App
-run    cd /opt; git clone https://github.com/dz0ny/yodl.git app --depth 1
+run    cd /opt; git clone https://github.com/dz0ny/yodl.git app --depth 2
 run    cd /opt/app ; python setup.py install; mkdir data
 
 add    ./supervisor/supervisord.conf /etc/supervisor/supervisord.conf
