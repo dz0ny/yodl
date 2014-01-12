@@ -1,69 +1,78 @@
-import subprocess
+from __future__ import absolute_import
+import hashlib
+import json
+import os.path
+import time
+from tornado.httpclient import HTTPRequest, HTTPClient
+from youtube_dl import _real_main as downloadFromService
+from yodl.__init__ import Enviroment
+from yodl.celeryapp import app
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import (
-    scoped_session,
-    sessionmaker,
-)
-import transaction
-from zope.sqlalchemy import ZopeTransactionExtension
-
-from yodl.celery_utils import celery
-from yodl.models import SongItem
-
-
-Task_DBSession = scoped_session(
-    sessionmaker(extension=ZopeTransactionExtension())
-)
-engine = create_engine('sqlite:///file.db')
-Task_DBSession.configure(bind=engine)
+# Patch exit function
+import sys
+import os
 
 
-@celery.task
-def transcode(url):
-    """docstring for dl_transcode"""
-    id_ = get_id(url)
-
-    if (id_, ) in Task_DBSession.query(SongItem.youtube_id).all():
-        return
-    p = subprocess.Popen(
-        ["youtube-dl", url, '-x', '--audio-format', 'vorbis', '--id'],
-        cwd='yodl/media/'
-    )
-    p.wait()
-    title = get_title(url)
-    if p.returncode:
-        raise Exception
-
-    task = SongItem(songname=title.strip().decode('utf8'), youtube_id=id_)
-    Task_DBSession.add(task)
-    transaction.commit()
-
-    return p.returncode, id_, title
+sys.exit = lambda *x: True
 
 
-@celery.task
-def get_title(url):
-    """docstring for dl_get_title"""
-    p = subprocess.Popen(["youtube-dl", url, '-e'], stdout=subprocess.PIPE)
-    p.wait()
-    title, err = p.communicate()
-    title = title.strip()
-    if p.returncode:
-        raise Exception
-    return title
+@app.task
+def transcode(url, user_agent, store):
+
+    # https://github.com/rg3/youtube-dl/blob/master/youtube_dl/__init__.py
+    file_id = hashlib.md5(url).hexdigest()
+    raw_file = os.path.join(store, file_id)
+    args = [
+        '-k',
+        '--extract-audio',
+        '--audio-format', 'mp3',
+        '--audio-quality', '0',
+        '--user-agent', user_agent,
+        '--rate-limit', '2M'
+        '--no-progress',
+        '--write-info-json',
+
+        '--output', raw_file + '.%(ext)s',
+
+        url
+    ]
+
+    downloadFromService(args)
+    Enviroment.database.delete('yodl:downloading:%s' % file_id)
+
+    with open('%s.info.json' % raw_file) as f:
+        data = json.loads(f.read())
+        data["added"] = int(time.time())
+        Enviroment.database.set(
+            'yodl:downloaded:%s' % file_id, json.dumps(data))
+
+        orginal = '%s.%s' % (raw_file, data["ext"])
+        jsoninfo = '%s.info.json' % raw_file
+        if os.path.isfile(orginal) and data["ext"] is not "mp3":
+            print("removing", orginal)
+            #os.remove(orginal)
+        if os.path.isfile(jsoninfo):
+            print("removing", jsoninfo)
+            os.remove(jsoninfo)
+
+        json_data = {
+                    'title': data['fulltitle'],
+                    'data': data,
+                    'id': file_id,
+                    'stream': '/stream/%s.mp3' % file_id
+                }
+        request = HTTPRequest(
+            headers={"Content-Type": "application/json"},
+            url="http://localhost:8888/event",
+            method="POST",
+            body=json.dumps({"event": "downloaded", "data": json_data}))
+        try:
+            httpclient = HTTPClient()
+            response = httpclient.fetch(request)
+            print response.body
+            httpclient.close()
+        except httpclient.HTTPError as e:
+            print "Error:", e
 
 
-@celery.task
-def get_id(url):
-    """docstring for get_id"""
-    p = subprocess.Popen(
-        ["youtube-dl", url, '--get-id'],
-        stdout=subprocess.PIPE,
-    )
-    p.wait()
-    id_, err = p.communicate()
-    if p.returncode:
-        raise Exception
 
-    return id_.strip()

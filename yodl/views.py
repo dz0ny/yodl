@@ -1,52 +1,97 @@
-from urlparse import urlparse
-from urlparse import parse_qs
-import logging
-import socket
+import hashlib
+import json
 
-from pyramid.view import view_config
-from pyramid.httpexceptions import HTTPFound
-
-from yodl.tasks import transcode
-from yodl.models import SongItem
-from yodl.models import DBSession
-from yodl.celery_utils import celery
+from tornado import web, websocket, escape
+from tornado.options import options
+from yodl import tasks, Enviroment
 
 
-log = logging.getLogger(__name__)
+def status():
+    downloaded = []
+    downloading = []
+
+    keys = Enviroment.database.keys('yodl:downloading:*')
+    if keys is not None:
+        for key in keys:
+            downloading.append(Enviroment.database.get(key))
+
+    keys = Enviroment.database.keys('yodl:downloaded:*')
+    if keys is not None:
+        for key in keys:
+            download_id = ("%s" % key).replace("yodl:downloaded:", "")
+            data = Enviroment.database.get(key)
+            if data is not None:
+                data = json.loads(data)
+
+                downloaded.append({
+                    'title': data['fulltitle'],
+                    'data': data,
+                    'id': download_id,
+                    'stream': '/stream/%s.mp3' % download_id
+                })
+    return {
+        'status': 'ok',
+        'downloaded': downloaded,
+        'downloading': downloading
+    }
 
 
-def url_validate(url):
-    """docstring for url_validate"""
-    o = urlparse(url)
-    try:
-        query = parse_qs(o.query)
-        if o.netloc.endswith("youtube.com")\
-                and query.keys() == [u'v']:
-            return url
-    except:
-        pass
+class WSConnection(websocket.WebSocketHandler):
+
+    cl = []
+
+    @classmethod
+    def broadcast(self, msg):
+        for x in self.cl:
+            x.write_message(json.dumps(msg))
+
+    def open(self):
+        if self not in self.cl:
+            self.cl.append(self)
+
+    def on_message(self, message):
+        self.write_message(u"You said: " + message)
+
+    def on_close(self):
+        if self in self.cl:
+            self.cl.remove(self)
 
 
-@view_config(route_name='home', renderer='templates/index.jinja2')
-def main_view(request):
-    if request.POST:
-        url = request.params["url"].strip()
-        # check if id and file all ready exists
-        if url_validate(url):
-            r = transcode.delay(url)
-            request.session["error"] = False
+class ListUrlHandler(web.RequestHandler):
 
+    def generateId(self, url):
+        return hashlib.md5(url).hexdigest()
+
+    def get(self):
+        self.write(status())
+
+    def post(self):
+        data = escape.json_decode(self.request.body)
+        url = data["url"]
+        if not url:
+            self.write({'status': 'error', 'error': 'Malformed request'})
         else:
-            request.session["error"] = True
+            download_id = self.generateId(url)
+            info = Enviroment.database.get('yodl:downloaded:%s' % download_id)
+            if info is None:
+                Enviroment.database.set('yodl:downloading:%s' % download_id, url)
+                WSConnection.broadcast({"event": "add", "data": url})
+                tasks.transcode.delay(
+                    url,
+                    self.request.headers.get('User-Agent'),
+                    options.download
+                )
+            self.write(status())
 
-        return HTTPFound(request.route_url('home'))
+class EventHandler(web.RequestHandler):
 
-    i = celery.control.inspect()
-    try:
-        queue = i.active()
-    except socket.error:
-        log.error("Could not connect to RabbitMQ server.")
-        raise
+    def post(self):
+        data = escape.json_decode(self.request.body)
+        WSConnection.broadcast(data)
+        self.write("event ok")
 
-    songs = DBSession.query(SongItem).all()
-    return {'songs': songs, 'queue': queue}
+class RootHandler(web.RequestHandler):
+
+    @web.asynchronous
+    def get(self):
+        self.redirect('/index.html', True)
