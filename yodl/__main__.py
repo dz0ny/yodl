@@ -6,6 +6,7 @@ import os
 import tornado
 from tornado.options import define, options
 from tornado.web import Application, StaticFileHandler
+from yodl import Enviroment
 
 from yodl.views import ListUrlHandler, WSConnection
 
@@ -29,6 +30,7 @@ def main():
             'default_filename': 'index.html'
         }),
     ])
+    Enviroment.database.redis.pubsub()
     app.listen(options.port)
     logging.info("Application ready and listening @ %i" % options.port)
     tornado.ioloop.IOLoop.instance().start()

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 import redis
 
 __author__ = 'dz0ny'
@@ -8,4 +9,7 @@ __version__ = '0.0.3'
 
 class Enviroment:
     # Singleton
-    database = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+    database = redis.from_url(
+        os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
+    )

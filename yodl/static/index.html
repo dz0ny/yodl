@@ -94,7 +94,10 @@
                                 <a target="_blank" href="{{file.url}}"><img class="thumb" ng-src="{{file.thumb}}"></a>
 
                             </td>
-                            <td>
+                            <td ng-hide="file.stream">
+                                <p>Downloading</p>
+                            </td>
+                            <td ng-show="file.stream">
                                 <p><a target="_blank" href="{{file.stream}}">{{file.title}}</a></p>
                                 <audio ng-src="{{file.stream}}" controls preload="none"></audio>
                                 <p>{{file.duration}} - {{file.bitrate}}</p>

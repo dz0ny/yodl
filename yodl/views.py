@@ -25,28 +25,29 @@ def status():
     return {
         'status': 'ok',
         'downloaded': downloaded,
+        'downloading': Enviroment.database.lrange('yodl:downloading', 0, -1),
     }
 
-
+CONNECTED_CLIENTS = []
 class WSConnection(websocket.WebSocketHandler):
-    cl = []
 
     @classmethod
     def broadcast(cls, msg):
-        for x in cls.cl:
+        for x in CONNECTED_CLIENTS:
             x.write_message(json.dumps(msg))
 
     def open(self):
-        if self not in self.cl:
-            self.cl.append(self)
+        CONNECTED_CLIENTS.append(self)
 
     def on_message(self, message):
-        self.write_message(u"You said: " + message)
+        print(message)
 
     def on_close(self):
-        if self in self.cl:
-            self.cl.remove(self)
+        CONNECTED_CLIENTS.remove(self)
 
+def on_success(sender, task_id, data):
+    Enviroment.database.lrem('yodl:downloading', 0, task_id)
+    WSConnection.broadcast({'event':'finished', 'url': task_id})
 
 class ListUrlHandler(web.RequestHandler):
     def get(self):
@@ -61,11 +62,10 @@ class ListUrlHandler(web.RequestHandler):
             download_id = generate_id(url)
             info = Enviroment.database.get('yodl:downloaded:%s' % download_id)
             if info is None:
-                Enviroment.database.set('yodl:downloading:%s' % download_id,
-                                        url)
-                WSConnection.broadcast({"event": "add", "data": url})
-                chain(
-                    get_info.s(url),
+                chain_id = chain(
+                    get_info.s(url, download_id),
                     download_audio.s(options.download, download_id)
                 ).delay()
+                Enviroment.database.lpush('yodl:downloading', chain_id)
+                Enviroment.database.ltrim('yodl:downloading', 0, 10)
             self.write(status())

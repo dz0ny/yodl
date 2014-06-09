@@ -1,11 +1,12 @@
 from __future__ import absolute_import
+import os
 
 from celery import Celery
 
 app = Celery(
     'yodl',
-    broker='redis://localhost',
-    backend='redis://localhost',
+    broker=os.getenv('REDISTOGO_URL', 'redis://localhost:6379'),
+    backend=os.getenv('REDISTOGO_URL', 'redis://localhost:6379'),
     include=['yodl.tasks']
 )
 
@@ -13,7 +14,7 @@ app = Celery(
 app.conf.update(
     CELERY_TASK_RESULT_EXPIRES=3600,
     CELERY_ACCEPT_CONTENT=['pickle', 'json'],
-    CELERY_RESULT_BACKEND='redis://localhost/1'
+    CELERY_RESULT_BACKEND=os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
 )
 
 if __name__ == '__main__':
