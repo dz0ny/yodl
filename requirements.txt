@@ -3,4 +3,4 @@ redis
 celery
 mock
 nose
-youtube_dl
+pafy

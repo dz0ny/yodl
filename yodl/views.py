@@ -1,48 +1,39 @@
 import hashlib
 import json
 
+from celery import chain
 from tornado import web, websocket, escape
 from tornado.options import options
-from yodl import tasks, Enviroment
+
+from yodl import Enviroment
+from yodl.tasks import get_info, download_audio
+
+
+def generate_id(url):
+    return hashlib.md5(url).hexdigest()
 
 
 def status():
     downloaded = []
-    downloading = []
-
-    keys = Enviroment.database.keys('yodl:downloading:*')
-    if keys is not None:
-        for key in keys:
-            downloading.append(Enviroment.database.get(key))
-
     keys = Enviroment.database.keys('yodl:downloaded:*')
     if keys is not None:
         for key in keys:
-            download_id = ("%s" % key).replace("yodl:downloaded:", "")
             data = Enviroment.database.get(key)
             if data is not None:
                 data = json.loads(data)
-
-                downloaded.append({
-                    'title': data['fulltitle'],
-                    'data': data,
-                    'id': download_id,
-                    'stream': '/stream/%s.mp3' % download_id
-                })
+                downloaded.append(data)
     return {
         'status': 'ok',
         'downloaded': downloaded,
-        'downloading': downloading
     }
 
 
 class WSConnection(websocket.WebSocketHandler):
-
     cl = []
 
     @classmethod
-    def broadcast(self, msg):
-        for x in self.cl:
+    def broadcast(cls, msg):
+        for x in cls.cl:
             x.write_message(json.dumps(msg))
 
     def open(self):
@@ -58,10 +49,6 @@ class WSConnection(websocket.WebSocketHandler):
 
 
 class ListUrlHandler(web.RequestHandler):
-
-    def generateId(self, url):
-        return hashlib.md5(url).hexdigest()
-
     def get(self):
         self.write(status())
 
@@ -71,27 +58,14 @@ class ListUrlHandler(web.RequestHandler):
         if not url:
             self.write({'status': 'error', 'error': 'Malformed request'})
         else:
-            download_id = self.generateId(url)
+            download_id = generate_id(url)
             info = Enviroment.database.get('yodl:downloaded:%s' % download_id)
             if info is None:
-                Enviroment.database.set('yodl:downloading:%s' % download_id, url)
+                Enviroment.database.set('yodl:downloading:%s' % download_id,
+                                        url)
                 WSConnection.broadcast({"event": "add", "data": url})
-                tasks.transcode.delay(
-                    url,
-                    self.request.headers.get('User-Agent'),
-                    options.download
-                )
+                chain(
+                    get_info.s(url),
+                    download_audio.s(options.download, download_id)
+                ).delay()
             self.write(status())
-
-class EventHandler(web.RequestHandler):
-
-    def post(self):
-        data = escape.json_decode(self.request.body)
-        WSConnection.broadcast(data)
-        self.write("event ok")
-
-class RootHandler(web.RequestHandler):
-
-    @web.asynchronous
-    def get(self):
-        self.redirect('/index.html', True)

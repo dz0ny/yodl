@@ -12,7 +12,8 @@ app = Celery(
 # Optional configuration, see the application user guide.
 app.conf.update(
     CELERY_TASK_RESULT_EXPIRES=3600,
-    CELERY_ACCEPT_CONTENT = ['pickle', 'json']
+    CELERY_ACCEPT_CONTENT=['pickle', 'json'],
+    CELERY_RESULT_BACKEND='redis://localhost/1'
 )
 
 if __name__ == '__main__':

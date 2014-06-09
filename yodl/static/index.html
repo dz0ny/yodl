@@ -67,7 +67,7 @@
                     <h2>Your Momma's music downloader</h2>
                 </div>
             </div>
-            <div class="pure-u-1-2">
+            <div class="pure-u-1">
               <h2 class="content-subhead">Prenesi nov komad</h2>
               <form form class="pure-form pure-form-stacked" ng-submit="add()">
                 <fieldset>
@@ -76,15 +76,6 @@
 
                 </fieldset>
               </form>
-            </div>
-
-            <div class="pure-u-1-2">
-              <h2 class="content-subhead">Se prenaša</h2>
-              <ul class="unstyled">
-                <li ng-repeat="file in downloading">
-                  <span><a href="{{file}}">{{file}}</a></span>
-                </li>
-              </ul>
             </div>
 
             <div class="pure-u-1">
@@ -100,12 +91,13 @@
                     <tbody>
                         <tr ng-repeat="file in downloaded | orderBy:'data.added'">
                             <td>
-                                <img class="thumb" ng-src="{{file.data.thumbnail}}">
+                                <a target="_blank" href="{{file.url}}"><img class="thumb" ng-src="{{file.thumb}}"></a>
+
                             </td>
                             <td>
                                 <p><a target="_blank" href="{{file.stream}}">{{file.title}}</a></p>
                                 <audio ng-src="{{file.stream}}" controls preload="none"></audio>
-                                <p><a target="_blank" href="{{file.data.webpage_url}}">{{file.data.webpage_url}}</a></p>
+                                <p>{{file.duration}} - {{file.bitrate}}</p>
                             </td>
                         </tr>
                     </tbody>
