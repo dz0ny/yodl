@@ -30,7 +30,7 @@ def main():
             'default_filename': 'index.html'
         }),
     ])
-    Enviroment.database.redis.pubsub()
+    Enviroment.database.pubsub()
     app.listen(options.port)
     logging.info("Application ready and listening @ %i" % options.port)
     tornado.ioloop.IOLoop.instance().start()

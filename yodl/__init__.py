@@ -10,6 +10,6 @@ __version__ = '0.0.3'
 class Enviroment:
     # Singleton
 
-    database = redis.from_url(
+    database = redis.StrictRedis.from_url(
         os.getenv('REDISTOGO_URL', 'redis://localhost:6379')
     )
